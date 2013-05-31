@@ -1,0 +1,166 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.mytaxi</groupId>
+  <artifactId>amazonsqs</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  
+  <properties>
+		<maven.javadoc.skip>true</maven.javadoc.skip>
+		<maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
+		<scm.url>scm:git:ssh://git@lab.mytaxi.com/mytaxi/amazonsqs.git</scm.url>
+		<jdk.version>1.6</jdk.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+		<sonar.login>admin</sonar.login>
+		<sonar.password>myt!sonar1</sonar.password>
+		<sonar.jdbc.url>jdbc:postgresql://localhost/sonar</sonar.jdbc.url>
+		<sonar.jdbc.driver>org.postgresql.Driver</sonar.jdbc.driver>
+		<sonar.jdbc.username>sonar</sonar.jdbc.username>
+		<sonar.jdbc.password>sonar</sonar.jdbc.password>
+		<sonar.host.url>http://localhost:9000</sonar.host.url>
+
+	</properties>
+
+
+	<repositories>
+		<repository>
+			<id>mytaxi</id>
+			<url>http://macmini.mytaxi.net:8020/archiva/repository/internal/</url>
+		</repository>
+	</repositories>
+
+
+	<dependencies>
+
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk</artifactId>
+			<version>1.4.3</version>
+		</dependency>
+		
+		<!-- MYTAXI -->
+
+		<dependency>
+			<groupId>com.mytaxi</groupId>
+			<artifactId>common</artifactId>
+			<version>0.0.30</version>
+		</dependency>
+
+		<!-- LOGGING -->
+
+		<dependency>
+			<groupId>org.apache.logging.log4j.adapters</groupId>
+			<artifactId>log4j-slf4j-impl</artifactId>
+			<version>2.0-beta4</version>
+		</dependency>
+
+		<!-- <dependency> -->
+		<!-- <groupId>org.apache.logging.log4j.adapters</groupId> -->
+		<!-- <artifactId>log4j-to-slf4j</artifactId> -->
+		<!-- <version>2.0-beta4</version> -->
+		<!-- </dependency> -->
+
+		<dependency>
+			<groupId>org.apache.logging.log4j.adapters</groupId>
+			<artifactId>log4j-1.2-api</artifactId>
+			<version>2.0-beta4</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.logging.log4j.adapters</groupId>
+			<artifactId>log4j-web</artifactId>
+			<version>2.0-beta4</version>
+		</dependency>
+
+
+		<!-- TESTING -->
+		
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-all</artifactId>
+			<version>1.9.5</version>
+			<scope>test</scope>
+		</dependency>
+
+
+
+		<!-- JAVA EXTENSIONS -->
+
+
+	</dependencies>
+
+	<scm>
+		<tag>HEAD</tag>
+		<url>${scm.url}</url>
+		<connection>${scm.url}</connection>
+		<developerConnection>${scm.url}</developerConnection>
+	</scm>
+
+	<distributionManagement>
+		<repository>
+			<id>mytaxi.archiva.internal</id>
+			<name>Internal Release Repository</name>
+			<url>dav:http://macmini.mytaxi.net:8020/archiva/repository/internal/</url>
+		</repository>
+	</distributionManagement>
+
+	<build>
+
+		<extensions>
+			<extension>
+				<groupId>org.apache.maven.wagon</groupId>
+				<artifactId>wagon-webdav</artifactId>
+				<version>1.0-beta-2</version>
+			</extension>
+		</extensions>
+
+		<plugins>
+
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>buildnumber-maven-plugin</artifactId>
+				<version>1.2</version>
+				<executions>
+					<execution>
+						<phase>validate</phase>
+						<goals>
+							<goal>create</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<doCheck>true</doCheck>
+					<doUpdate>true</doUpdate>
+					<shortRevisionLength>5</shortRevisionLength>
+					<format>{0} {1,date,yyyy-MM-dd HH:mm:ss}</format>
+					<items>
+						<item>scmVersion</item>
+						<item>timestamp</item>
+					</items>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.0</version>
+				<configuration>
+					<encoding>${project.build.sourceEncoding}</encoding>
+					<source>${jdk.version}</source>
+					<target>${jdk.version}</target>
+				</configuration>
+			</plugin>
+
+
+		</plugins>
+	</build>
+  
+</project>
