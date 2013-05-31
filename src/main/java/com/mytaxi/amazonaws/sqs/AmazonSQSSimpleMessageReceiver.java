@@ -1,10 +1,8 @@
 package com.mytaxi.amazonaws.sqs;
 
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,26 +18,23 @@ import com.amazonaws.services.sqs.model.Message;
 public class AmazonSQSSimpleMessageReceiver
 {
 
-    static final Logger          LOG                     = LoggerFactory.getLogger(AmazonSQSSimpleMessageReceiver.class);
+    static final Logger          LOG        = LoggerFactory.getLogger(AmazonSQSSimpleMessageReceiver.class);
 
     private final AmazonSQSQueue queue;
-    private ExecutorService      receiverPool            = null;
-    private ExecutorService      workerPool              = null;
+    private ExecutorService      workerPool = null;
     private final MessageHandler messageHandler;
 
-    private final AtomicInteger  runningReceiverCount    = new AtomicInteger(0);
-    private final int            maxRunningReceiverCount = 10;
-    private final AtomicInteger  runningWorkerCount      = new AtomicInteger(0);
-    private final int            mxRunningWorkerCount    = 10;
+
+    private final int            workerCount;
 
 
-
-
-    public AmazonSQSSimpleMessageReceiver(final AmazonSQSQueue queue, final MessageHandler messageHandler)
+    public AmazonSQSSimpleMessageReceiver(final AmazonSQSQueue queue, final MessageHandler messageHandler, final int workerCount)
     {
         super();
         this.queue = queue;
         this.messageHandler = messageHandler;
+        this.workerCount = workerCount;
+        this.workerPool = Executors.newFixedThreadPool(this.workerCount);
     }
 
 
@@ -47,64 +42,40 @@ public class AmazonSQSSimpleMessageReceiver
 
     public void start()
     {
-        this.workerPool = Executors.newCachedThreadPool();
-
-        this.receiverPool = Executors.newCachedThreadPool();
-
-        this.incrementReceiverCount();
-
-    }
-
-
-
-
-    private void incrementReceiverCount()
-    {
-        AmazonSQSSimpleMessageReceiver.this.runningReceiverCount.incrementAndGet();
-        this.receiverPool.submit(new Runnable()
+        for (int i = 0; i < this.workerCount; i++)
         {
-
-            @Override
-            public void run()
+            this.workerPool.submit(new Runnable()
             {
-                while (!AmazonSQSSimpleMessageReceiver.this.receiverPool.isShutdown())
+
+                @Override
+                public void run()
                 {
-                    try
+                    while (!AmazonSQSSimpleMessageReceiver.this.workerPool.isShutdown())
                     {
-                        final List<Message> messages = AmazonSQSSimpleMessageReceiver.this.queue.receiveMessageBatch(1);
-
-                        for (final Message message : messages)
+                        try
                         {
-                            AmazonSQSSimpleMessageReceiver.this.runningWorkerCount.incrementAndGet();
-                            AmazonSQSSimpleMessageReceiver.this.workerPool.submit(new Runnable()
+                            final Message message = AmazonSQSSimpleMessageReceiver.this.queue.receiveMessage();
+                            if (message != null)
                             {
-
-                                @Override
-                                public void run()
+                                try
                                 {
-                                    try
-                                    {
-                                        AmazonSQSSimpleMessageReceiver.this.messageHandler.receivedMessage(new MessageTask(message, AmazonSQSSimpleMessageReceiver.this.queue));
-                                    }
-                                    catch (final Throwable e)
-                                    {
-                                        LOG.error("uncought exception", e);
-                                    }
-                                    AmazonSQSSimpleMessageReceiver.this.runningWorkerCount.decrementAndGet();
+                                    AmazonSQSSimpleMessageReceiver.this.messageHandler.receivedMessage(new MessageTask(message, AmazonSQSSimpleMessageReceiver.this.queue));
                                 }
-                            });
+                                catch (final Throwable e)
+                                {
+                                    LOG.error("uncought exception", e);
+                                }
+                            }
+                        }
+                        catch (final Throwable e)
+                        {
+                            LOG.error("uncought exception", e);
                         }
                     }
-                    catch (final Throwable e)
-                    {
-                        LOG.error("uncought exception", e);
-                    }
-
                 }
+            });
+        }
 
-                AmazonSQSSimpleMessageReceiver.this.runningReceiverCount.decrementAndGet();
-            }
-        });
     }
 
 
@@ -112,8 +83,6 @@ public class AmazonSQSSimpleMessageReceiver
 
     public void shutdown() throws InterruptedException
     {
-        this.receiverPool.shutdown();
-        this.receiverPool.awaitTermination(30, TimeUnit.SECONDS);
         this.workerPool.shutdown();
         this.workerPool.awaitTermination(30, TimeUnit.SECONDS);
     }
