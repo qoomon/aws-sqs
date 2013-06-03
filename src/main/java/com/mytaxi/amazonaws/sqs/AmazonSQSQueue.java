@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.amazonaws.services.sqs.model.ChangeMessageVisibilityBatchRequest;
 import com.amazonaws.services.sqs.model.ChangeMessageVisibilityBatchRequestEntry;
 import com.amazonaws.services.sqs.model.ChangeMessageVisibilityRequest;
@@ -38,7 +39,7 @@ public class AmazonSQSQueue
 
     static final Logger     LOG                                               = LoggerFactory.getLogger(AmazonSQSQueue.class);
 
-    private final AmazonSQS amazonSqs;
+    private final AmazonSQSAsync amazonSqs;
     private final String    queueName;
     private final int       waitTimeSeconds;
     private final int       visibilityTimeoutSeconds;
@@ -50,7 +51,7 @@ public class AmazonSQSQueue
 
     @Autowired
     public AmazonSQSQueue(
-            final AmazonSQS amazonSqs, final String queueName, final int waitTimeSeconds, final int visibilityTimeoutSeconds)
+            final AmazonSQSAsync amazonSqs, final String queueName, final int waitTimeSeconds, final int visibilityTimeoutSeconds)
     {
         Preconditions.checkNotNull(amazonSqs);
         this.amazonSqs = amazonSqs;
@@ -83,7 +84,7 @@ public class AmazonSQSQueue
         Preconditions.checkState(this.isInit(), "init() first");
         final SendMessageRequest sendMessageRequest = new SendMessageRequest(this.queueUrl, messageBody)
         .withDelaySeconds(delaySeconds);
-        this.amazonSqs.sendMessage(sendMessageRequest);
+        this.amazonSqs.sendMessageAsync(sendMessageRequest);
 
     }
 
@@ -109,7 +110,7 @@ public class AmazonSQSQueue
             id++;
         }
         final SendMessageBatchRequest sendMessageBatchRequest = new SendMessageBatchRequest(this.queueUrl, entries);
-        this.amazonSqs.sendMessageBatch(sendMessageBatchRequest);
+        this.amazonSqs.sendMessageBatchAsync(sendMessageBatchRequest);
 
     }
 

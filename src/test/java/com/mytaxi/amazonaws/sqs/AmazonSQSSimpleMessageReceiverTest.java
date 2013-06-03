@@ -2,15 +2,15 @@ package com.mytaxi.amazonaws.sqs;
 
 import static org.junit.Assert.assertTrue;
 
-import java.util.LinkedList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 
 import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.AmazonSQSClient;
+import com.amazonaws.services.sqs.AmazonSQSAsync;
+import com.amazonaws.services.sqs.AmazonSQSAsyncClient;
+import com.amazonaws.services.sqs.buffered.AmazonSQSBufferedAsyncClient;
 import com.google.common.base.Stopwatch;
 
 public class AmazonSQSSimpleMessageReceiverTest
@@ -38,10 +38,13 @@ public class AmazonSQSSimpleMessageReceiverTest
                 return "AKIAI35ZH66EYCVZ4WXA";
             }
         };
-        final AmazonSQS amazonSqs = new AmazonSQSClient(awsCredentials);
-        final AmazonSQSQueue amazonSQSQueue = new AmazonSQSQueue(amazonSqs, "AmazonSQSTestQueue", 20, 5);
+        final AmazonSQSAsync sqsAsync = new AmazonSQSAsyncClient(awsCredentials);
+        // Create the buffered client
+        final AmazonSQSAsync sqs = new AmazonSQSBufferedAsyncClient(sqsAsync);
+
+        final AmazonSQSQueue amazonSQSQueue = new AmazonSQSQueue(sqs, "AmazonSQSTestQueue", 20, 5);
         amazonSQSQueue.init();
-        final int messagesToSend = 100;
+        final int messagesToSend = 1000;
         this.fillQueueWithTestData(amazonSQSQueue, messagesToSend);
 
         final CountDownLatch countDownLatch = new CountDownLatch(messagesToSend);
@@ -52,18 +55,18 @@ public class AmazonSQSSimpleMessageReceiverTest
             public void receivedMessage(final MessageTask messageTask)
             {
                 countDownLatch.countDown();
+                System.out.println("countDownLatch: " + countDownLatch.getCount());
                 messageTask.delete();
             }
         };
         final AmazonSQSSimpleMessageReceiver amazonSQSSimpleMessageReceiver = new AmazonSQSSimpleMessageReceiver(amazonSQSQueue, messageHandler, 32);
 
         // WHEN
-
         amazonSQSSimpleMessageReceiver.start();
         final Stopwatch stopwatch = new Stopwatch().start();
 
         // THEN
-        final int maxRuntime = 2000;
+        final int maxRuntime = 20000;
         countDownLatch.await(maxRuntime, TimeUnit.MILLISECONDS);
         final long runtime = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
         amazonSQSSimpleMessageReceiver.shutdown();
@@ -81,13 +84,8 @@ public class AmazonSQSSimpleMessageReceiverTest
         int messageCount = 0;
         while (messageCount < messagesToSend)
         {
-            final LinkedList<String> messageBodies = new LinkedList<String>();
-            for (int j = 0; j < 10; j++)
-            {
-                messageCount++;
-                messageBodies.add("messageID: " + j + " systime: " + System.currentTimeMillis());
-            }
-            amazonSqs.sendMessage(messageBodies, 0);
+            messageCount++;
+            // amazonSqs.sendMessage("messageCount: " + messageCount + " - " + System.currentTimeMillis(), 0);
             System.out.println("send: messageID: " + messageCount);
         }
         System.out.println("all messages send!");
