@@ -44,7 +44,7 @@ public class AmazonSQSSimpleMessageReceiverTest
 
         final AmazonSQSQueue amazonSQSQueue = new AmazonSQSQueue(sqs, "AmazonSQSTestQueue", 20, 5);
         amazonSQSQueue.init();
-        final int messagesToSend = 1000;
+        final int messagesToSend = 100;
         this.fillQueueWithTestData(amazonSQSQueue, messagesToSend);
 
         final CountDownLatch countDownLatch = new CountDownLatch(messagesToSend);

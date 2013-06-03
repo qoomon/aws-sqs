@@ -1,2 +1,4 @@
 /target
 /.classpath
+pom.xml.releaseBackup
+release.properties
