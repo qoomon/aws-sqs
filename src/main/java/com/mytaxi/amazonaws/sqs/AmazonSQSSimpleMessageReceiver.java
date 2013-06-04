@@ -18,73 +18,76 @@ import com.amazonaws.services.sqs.model.Message;
 public class AmazonSQSSimpleMessageReceiver
 {
 
-    static final Logger          LOG        = LoggerFactory.getLogger(AmazonSQSSimpleMessageReceiver.class);
+  static final Logger LOG = LoggerFactory.getLogger(AmazonSQSSimpleMessageReceiver.class);
 
-    private final AmazonSQSQueue queue;
-    private ExecutorService      workerPool = null;
-    private final MessageHandler messageHandler;
-
-
-    private final int            workerCount;
+  private final AmazonSQSQueue queue;
+  private ExecutorService workerPool = null;
+  private final MessageHandler messageHandler;
 
 
-    public AmazonSQSSimpleMessageReceiver(final AmazonSQSQueue queue, final MessageHandler messageHandler, final int workerCount)
+  private final int workerCount;
+
+
+  public AmazonSQSSimpleMessageReceiver(
+    final AmazonSQSQueue queue, final MessageHandler messageHandler, final int workerCount)
+  {
+    super();
+    this.queue = queue;
+    this.messageHandler = messageHandler;
+    this.workerCount = workerCount;
+    this.workerPool = Executors.newFixedThreadPool(this.workerCount);
+  }
+
+
+
+  public void start()
+  {
+    for (int i = 0; i < this.workerCount; i++)
     {
-        super();
-        this.queue = queue;
-        this.messageHandler = messageHandler;
-        this.workerCount = workerCount;
-        this.workerPool = Executors.newFixedThreadPool(this.workerCount);
-    }
+      this.workerPool.submit(new Runnable()
+      {
 
-
-
-
-    public void start()
-    {
-        for (int i = 0; i < this.workerCount; i++)
+        @Override
+        public void run()
         {
-            this.workerPool.submit(new Runnable()
+          while (!AmazonSQSSimpleMessageReceiver.this.workerPool.isShutdown())
+          {
+            try
             {
-
-                @Override
-                public void run()
+              final Message message = AmazonSQSSimpleMessageReceiver.this.queue.receiveMessage();
+              if (message != null)
+              {
+                try
                 {
-                    while (!AmazonSQSSimpleMessageReceiver.this.workerPool.isShutdown())
-                    {
-                        try
-                        {
-                            final Message message = AmazonSQSSimpleMessageReceiver.this.queue.receiveMessage();
-                            if (message != null)
-                            {
-                                try
-                                {
-                                    AmazonSQSSimpleMessageReceiver.this.messageHandler.receivedMessage(new MessageTask(message, AmazonSQSSimpleMessageReceiver.this.queue));
-                                }
-                                catch (final Throwable e)
-                                {
-                                    LOG.error("uncought exception", e);
-                                }
-                            }
-                        }
-                        catch (final Throwable e)
-                        {
-                            LOG.error("uncought exception", e);
-                        }
-                    }
+                  AmazonSQSSimpleMessageReceiver.this.messageHandler.receivedMessage(new MessageTask(
+                    message, AmazonSQSSimpleMessageReceiver.this.queue));
                 }
-            });
+                catch (final Throwable e)
+                {
+                  LOG.error("uncought exception", e);
+                }
+              } else
+              {
+                LOG.debug("no message received");
+              }
+            }
+            catch (final Throwable e)
+            {
+              LOG.error("uncought exception", e);
+            }
+          }
         }
-
+      });
     }
 
+  }
 
 
 
-    public void shutdown() throws InterruptedException
-    {
-        this.workerPool.shutdown();
-        this.workerPool.awaitTermination(30, TimeUnit.SECONDS);
-    }
+  public void shutdown() throws InterruptedException
+  {
+    this.workerPool.shutdown();
+    this.workerPool.awaitTermination(30, TimeUnit.SECONDS);
+  }
 
 }
