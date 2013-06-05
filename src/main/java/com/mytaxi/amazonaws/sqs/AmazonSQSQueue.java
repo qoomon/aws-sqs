@@ -30,9 +30,9 @@ import com.google.common.base.Preconditions;
 
 /**
  * UtilClass to continuously poll from amazon message queue
- * 
+ *
  * @author bengtbrodersen
- * 
+ *
  */
 public class AmazonSQSQueue
 {
@@ -99,7 +99,7 @@ public class AmazonSQSQueue
         Preconditions.checkNotNull(messageBody, "messageBody is null");
         Preconditions.checkState(this.isInit(), "init() first");
         final SendMessageRequest sendMessageRequest = new SendMessageRequest(this.queueUrl, messageBody)
-        .withDelaySeconds(delaySeconds);
+                .withDelaySeconds(delaySeconds);
 
         this.amazonSqs.sendMessageAsync(sendMessageRequest);
 
@@ -123,7 +123,7 @@ public class AmazonSQSQueue
         for (final String messageBody : messageBodys)
         {
             entries.add(new SendMessageBatchRequestEntry(id.toString(), messageBody)
-            .withDelaySeconds(delaySeconds));
+                    .withDelaySeconds(delaySeconds));
             id++;
         }
         final SendMessageBatchRequest sendMessageBatchRequest = new SendMessageBatchRequest(this.queueUrl, entries);
@@ -147,10 +147,11 @@ public class AmazonSQSQueue
     {
         Preconditions.checkState(this.isInit(), "init() first");
         final ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(this.queueUrl)
-        .withAttributeNames("ApproximateReceiveCount")
-        .withWaitTimeSeconds(this.waitTimeSeconds)
-        .withVisibilityTimeout(this.visibilityTimeoutSeconds)
-        .withMaxNumberOfMessages(Math.min(maxNumberOfMessages, RECEIVED_MESSAGE_REQUEST_MAX_NUMBER_OF_MESSAGES));
+                // http://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/Query_QueryReceiveMessage.html
+                .withAttributeNames("ApproximateReceiveCount")
+                .withWaitTimeSeconds(this.waitTimeSeconds)
+                .withVisibilityTimeout(this.visibilityTimeoutSeconds)
+                .withMaxNumberOfMessages(Math.min(maxNumberOfMessages, RECEIVED_MESSAGE_REQUEST_MAX_NUMBER_OF_MESSAGES));
         final Future<ReceiveMessageResult> receiveMessage = this.amazonSqs.receiveMessageAsync(receiveMessageRequest);
         try
         {
@@ -230,7 +231,7 @@ public class AmazonSQSQueue
         for (final Message message : messages)
         {
             entries.add(new ChangeMessageVisibilityBatchRequestEntry(message.getMessageId(), message.getReceiptHandle())
-            .withVisibilityTimeout(visibilityTimeoutSeconds));
+                    .withVisibilityTimeout(visibilityTimeoutSeconds));
         }
 
         final ChangeMessageVisibilityBatchRequest changeMessageVisibilityBatchRequest =
