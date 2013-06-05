@@ -36,227 +36,254 @@ import com.google.common.base.Preconditions;
  */
 public class AmazonSQSQueue
 {
-  public static final int RECEIVED_MESSAGE_REQUEST_MAX_NUMBER_OF_MESSAGES = 10;
-  public static final int RECEIVED_MESSAGE_REQUEST_MAX_WAIT_TIMEOUT_SECONDS = 20;
 
-  static final Logger LOG = LoggerFactory.getLogger(AmazonSQSQueue.class);
+    public static final int      RECEIVED_MESSAGE_REQUEST_MAX_NUMBER_OF_MESSAGES   = 10;
+    public static final int      RECEIVED_MESSAGE_REQUEST_MAX_WAIT_TIMEOUT_SECONDS = 20;
 
-  private final AmazonSQSAsync amazonSqs;
-  private final String queueName;
-  private final int waitTimeSeconds;
-  private final int visibilityTimeoutSeconds;
+    static final Logger          LOG                                               = LoggerFactory.getLogger(AmazonSQSQueue.class);
 
-  private String queueUrl = null;
+    private final AmazonSQSAsync amazonSqs;
+    private final String         queueName;
+    private final int            waitTimeSeconds;
+    private final int            visibilityTimeoutSeconds;
 
-
-
-  @Autowired
-  public AmazonSQSQueue(
-    final AmazonSQSAsync amazonSqs, final String queueName, final int waitTimeSeconds,
-    final int visibilityTimeoutSeconds)
-  {
-    Preconditions.checkNotNull(amazonSqs);
-    this.amazonSqs = amazonSqs;
-    Preconditions.checkNotNull(queueName);
-    this.queueName = queueName;
-    Preconditions.checkArgument(waitTimeSeconds > 0);
-    Preconditions.checkArgument(waitTimeSeconds <= RECEIVED_MESSAGE_REQUEST_MAX_WAIT_TIMEOUT_SECONDS);
-    this.waitTimeSeconds = waitTimeSeconds;
-    Preconditions.checkArgument(visibilityTimeoutSeconds > 0);
-    this.visibilityTimeoutSeconds = visibilityTimeoutSeconds;
-  }
+    private String               queueUrl                                          = null;
 
 
 
-  public void create()
-  {
-    LOG.info("creating sqs queue... name: " + this.queueName);
-    final CreateQueueRequest createQueueRequest = new CreateQueueRequest().withQueueName(this.queueName);
-    this.queueUrl = this.amazonSqs.createQueue(createQueueRequest).getQueueUrl();
-    LOG.info("creating sqs queue done! name: " + this.queueName + " url: " + this.queueUrl);
-  }
 
-  public void delete()
-  {
-    Preconditions.checkState(this.isInit(), "init() first");
-    LOG.info("delete sqs queue... name: " + this.queueName);
-    DeleteQueueRequest deleteQueueRequest = new DeleteQueueRequest(queueUrl);
-    this.amazonSqs.deleteQueue(deleteQueueRequest);
-    LOG.info("delete sqs queue done! name: " + this.queueName + " url: " + this.queueUrl);
-  }
-
-
-
-  public void sendMessage(final String messageBody, final int delaySeconds)
-  {
-    Preconditions.checkNotNull(messageBody, "messageBody is null");
-    Preconditions.checkState(this.isInit(), "init() first");
-    final SendMessageRequest sendMessageRequest = new SendMessageRequest(this.queueUrl, messageBody)
-      .withDelaySeconds(delaySeconds);
-    this.amazonSqs.sendMessageAsync(sendMessageRequest);
-
-  }
-
-
-
-  public void sendMessage(final Collection<String> messageBodys, final int delaySeconds)
-  {
-    Preconditions.checkNotNull(messageBodys, "messageBodys is null");
-    Preconditions.checkState(this.isInit(), "init() first");
-
-    if (messageBodys.isEmpty())
+    @Autowired
+    public AmazonSQSQueue(
+            final AmazonSQSAsync amazonSqs, final String queueName, final int waitTimeSeconds,
+            final int visibilityTimeoutSeconds)
     {
-      return;
+        Preconditions.checkNotNull(amazonSqs);
+        this.amazonSqs = amazonSqs;
+        Preconditions.checkNotNull(queueName);
+        this.queueName = queueName;
+        Preconditions.checkArgument(waitTimeSeconds > 0);
+        Preconditions.checkArgument(waitTimeSeconds <= RECEIVED_MESSAGE_REQUEST_MAX_WAIT_TIMEOUT_SECONDS);
+        this.waitTimeSeconds = waitTimeSeconds;
+        Preconditions.checkArgument(visibilityTimeoutSeconds > 0);
+        this.visibilityTimeoutSeconds = visibilityTimeoutSeconds;
     }
 
-    final List<SendMessageBatchRequestEntry> entries = new LinkedList<SendMessageBatchRequestEntry>();
-    Integer id = 0;
-    for (final String messageBody : messageBodys)
+
+
+
+    public void create()
     {
-      entries.add(new SendMessageBatchRequestEntry(id.toString(), messageBody)
-        .withDelaySeconds(delaySeconds));
-      id++;
+        LOG.info("creating sqs queue... name: " + this.queueName);
+        final CreateQueueRequest createQueueRequest = new CreateQueueRequest().withQueueName(this.queueName);
+        this.queueUrl = this.amazonSqs.createQueue(createQueueRequest).getQueueUrl();
+        LOG.info("creating sqs queue done! name: " + this.queueName + " url: " + this.queueUrl);
     }
-    final SendMessageBatchRequest sendMessageBatchRequest = new SendMessageBatchRequest(this.queueUrl, entries);
-    this.amazonSqs.sendMessageBatchAsync(sendMessageBatchRequest);
-
-  }
 
 
 
-  public Message receiveMessage()
-  {
-    final List<Message> receiveMessageBatch = this.receiveMessageBatch(1);
-    return receiveMessageBatch.isEmpty() ? null : receiveMessageBatch.get(0);
-  }
 
-
-
-  public List<Message> receiveMessageBatch(final int maxNumberOfMessages)
-  {
-    Preconditions.checkState(this.isInit(), "init() first");
-    final ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(this.queueUrl)
-      .withWaitTimeSeconds(this.waitTimeSeconds)
-      .withVisibilityTimeout(this.visibilityTimeoutSeconds)
-      .withMaxNumberOfMessages(Math.min(maxNumberOfMessages, RECEIVED_MESSAGE_REQUEST_MAX_NUMBER_OF_MESSAGES));
-    final Future<ReceiveMessageResult> receiveMessage = this.amazonSqs.receiveMessageAsync(receiveMessageRequest);
-    try {
-      return receiveMessage.get().getMessages();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    } catch (ExecutionException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-
-
-  public void delete(final Message message)
-  {
-    Preconditions.checkNotNull(message, "message is null");
-    Preconditions.checkState(this.isInit(), "init() first");
-    final DeleteMessageRequest deleteMessageRequest =
-      new DeleteMessageRequest(this.queueUrl, message.getReceiptHandle());
-    this.amazonSqs.deleteMessageAsync(deleteMessageRequest);
-  }
-
-
-
-  protected void delete(final Collection<Message> messages)
-  {
-    Preconditions.checkNotNull(messages, "messages is null");
-    Preconditions.checkState(this.isInit(), "init() first");
-
-    if (messages.isEmpty())
+    public void delete()
     {
-      return;
+        Preconditions.checkState(this.isInit(), "init() first");
+        LOG.info("delete sqs queue... name: " + this.queueName);
+        final DeleteQueueRequest deleteQueueRequest = new DeleteQueueRequest(this.queueUrl);
+        this.amazonSqs.deleteQueue(deleteQueueRequest);
+        LOG.info("delete sqs queue done! name: " + this.queueName + " url: " + this.queueUrl);
     }
 
-    final List<DeleteMessageBatchRequestEntry> entries = new LinkedList<DeleteMessageBatchRequestEntry>();
-    for (final Message message : messages)
+
+
+
+    public void sendMessage(final String messageBody, final int delaySeconds)
     {
-      entries.add(new DeleteMessageBatchRequestEntry(message.getMessageId(), message.getReceiptHandle()));
+        Preconditions.checkNotNull(messageBody, "messageBody is null");
+        Preconditions.checkState(this.isInit(), "init() first");
+        final SendMessageRequest sendMessageRequest = new SendMessageRequest(this.queueUrl, messageBody)
+        .withDelaySeconds(delaySeconds);
+
+        this.amazonSqs.sendMessageAsync(sendMessageRequest);
+
     }
-    final DeleteMessageBatchRequest deleteMessageBatchRequest = new DeleteMessageBatchRequest(this.queueUrl, entries);
-    this.amazonSqs.deleteMessageBatchAsync(deleteMessageBatchRequest);
-  }
 
 
 
-  public void changeVisibility(final Message message, final int visibilityTimeoutSeconds)
-  {
-    Preconditions.checkNotNull(message, "message is null");
-    Preconditions.checkState(this.isInit(), "init() first");
-    final ChangeMessageVisibilityRequest changeMessageVisibilityRequest =
-      new ChangeMessageVisibilityRequest(this.queueUrl, message.getReceiptHandle(), visibilityTimeoutSeconds);
-    this.amazonSqs.changeMessageVisibilityAsync(changeMessageVisibilityRequest);
-  }
 
-
-
-  protected void changeVisibility(final Collection<Message> messages, final int visibilityTimeoutSeconds)
-  {
-    Preconditions.checkNotNull(messages, "messages is null");
-    Preconditions.checkState(this.isInit(), "init() first");
-
-    if (messages.isEmpty())
+    public void sendMessage(final Collection<String> messageBodys, final int delaySeconds)
     {
-      return;
+        Preconditions.checkNotNull(messageBodys, "messageBodys is null");
+        Preconditions.checkState(this.isInit(), "init() first");
+
+        if (messageBodys.isEmpty())
+        {
+            return;
+        }
+
+        final List<SendMessageBatchRequestEntry> entries = new LinkedList<SendMessageBatchRequestEntry>();
+        Integer id = 0;
+        for (final String messageBody : messageBodys)
+        {
+            entries.add(new SendMessageBatchRequestEntry(id.toString(), messageBody)
+            .withDelaySeconds(delaySeconds));
+            id++;
+        }
+        final SendMessageBatchRequest sendMessageBatchRequest = new SendMessageBatchRequest(this.queueUrl, entries);
+        this.amazonSqs.sendMessageBatchAsync(sendMessageBatchRequest);
+
     }
 
-    final List<ChangeMessageVisibilityBatchRequestEntry> entries =
-      new LinkedList<ChangeMessageVisibilityBatchRequestEntry>();
-    for (final Message message : messages)
+
+
+
+    public Message receiveMessage()
     {
-      entries.add(new ChangeMessageVisibilityBatchRequestEntry(message.getMessageId(), message.getReceiptHandle())
-        .withVisibilityTimeout(visibilityTimeoutSeconds));
+        final List<Message> receiveMessageBatch = this.receiveMessageBatch(1);
+        return receiveMessageBatch.isEmpty() ? null : receiveMessageBatch.get(0);
     }
 
-    final ChangeMessageVisibilityBatchRequest changeMessageVisibilityBatchRequest =
-      new ChangeMessageVisibilityBatchRequest(this.queueUrl, entries);
-    this.amazonSqs.changeMessageVisibilityBatchAsync(changeMessageVisibilityBatchRequest);
-  }
 
 
 
-  public AmazonSQS getAmazonSqs()
-  {
-    return this.amazonSqs;
-  }
+    public List<Message> receiveMessageBatch(final int maxNumberOfMessages)
+    {
+        Preconditions.checkState(this.isInit(), "init() first");
+        final ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(this.queueUrl)
+        .withAttributeNames("ApproximateReceiveCount")
+        .withWaitTimeSeconds(this.waitTimeSeconds)
+        .withVisibilityTimeout(this.visibilityTimeoutSeconds)
+        .withMaxNumberOfMessages(Math.min(maxNumberOfMessages, RECEIVED_MESSAGE_REQUEST_MAX_NUMBER_OF_MESSAGES));
+        final Future<ReceiveMessageResult> receiveMessage = this.amazonSqs.receiveMessageAsync(receiveMessageRequest);
+        try
+        {
+            return receiveMessage.get().getMessages();
+        }
+        catch (final InterruptedException e)
+        {
+            throw new RuntimeException(e);
+        }
+        catch (final ExecutionException e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
 
 
 
-  public String getQueueUrl()
-  {
-    return this.queueUrl;
-  }
+
+    public void delete(final Message message)
+    {
+        Preconditions.checkNotNull(message, "message is null");
+        Preconditions.checkState(this.isInit(), "init() first");
+        final DeleteMessageRequest deleteMessageRequest =
+                new DeleteMessageRequest(this.queueUrl, message.getReceiptHandle());
+        this.amazonSqs.deleteMessageAsync(deleteMessageRequest);
+    }
 
 
 
-  public String getQueueName()
-  {
-    return this.queueName;
-  }
+
+    protected void delete(final Collection<Message> messages)
+    {
+        Preconditions.checkNotNull(messages, "messages is null");
+        Preconditions.checkState(this.isInit(), "init() first");
+
+        if (messages.isEmpty())
+        {
+            return;
+        }
+
+        final List<DeleteMessageBatchRequestEntry> entries = new LinkedList<DeleteMessageBatchRequestEntry>();
+        for (final Message message : messages)
+        {
+            entries.add(new DeleteMessageBatchRequestEntry(message.getMessageId(), message.getReceiptHandle()));
+        }
+        final DeleteMessageBatchRequest deleteMessageBatchRequest = new DeleteMessageBatchRequest(this.queueUrl, entries);
+        this.amazonSqs.deleteMessageBatchAsync(deleteMessageBatchRequest);
+    }
 
 
 
-  public int getWaitTimeSeconds()
-  {
-    return this.waitTimeSeconds;
-  }
+
+    public void changeVisibility(final Message message, final int visibilityTimeoutSeconds)
+    {
+        Preconditions.checkNotNull(message, "message is null");
+        Preconditions.checkState(this.isInit(), "init() first");
+        final ChangeMessageVisibilityRequest changeMessageVisibilityRequest =
+                new ChangeMessageVisibilityRequest(this.queueUrl, message.getReceiptHandle(), visibilityTimeoutSeconds);
+        this.amazonSqs.changeMessageVisibilityAsync(changeMessageVisibilityRequest);
+    }
 
 
 
-  public int getVisibilityTimeoutSeconds()
-  {
-    return this.visibilityTimeoutSeconds;
-  }
+
+    protected void changeVisibility(final Collection<Message> messages, final int visibilityTimeoutSeconds)
+    {
+        Preconditions.checkNotNull(messages, "messages is null");
+        Preconditions.checkState(this.isInit(), "init() first");
+
+        if (messages.isEmpty())
+        {
+            return;
+        }
+
+        final List<ChangeMessageVisibilityBatchRequestEntry> entries =
+                new LinkedList<ChangeMessageVisibilityBatchRequestEntry>();
+        for (final Message message : messages)
+        {
+            entries.add(new ChangeMessageVisibilityBatchRequestEntry(message.getMessageId(), message.getReceiptHandle())
+            .withVisibilityTimeout(visibilityTimeoutSeconds));
+        }
+
+        final ChangeMessageVisibilityBatchRequest changeMessageVisibilityBatchRequest =
+                new ChangeMessageVisibilityBatchRequest(this.queueUrl, entries);
+        this.amazonSqs.changeMessageVisibilityBatchAsync(changeMessageVisibilityBatchRequest);
+    }
 
 
 
-  public boolean isInit()
-  {
-    return this.queueUrl != null;
-  }
+
+    public AmazonSQS getAmazonSqs()
+    {
+        return this.amazonSqs;
+    }
+
+
+
+
+    public String getQueueUrl()
+    {
+        return this.queueUrl;
+    }
+
+
+
+
+    public String getQueueName()
+    {
+        return this.queueName;
+    }
+
+
+
+
+    public int getWaitTimeSeconds()
+    {
+        return this.waitTimeSeconds;
+    }
+
+
+
+
+    public int getVisibilityTimeoutSeconds()
+    {
+        return this.visibilityTimeoutSeconds;
+    }
+
+
+
+
+    public boolean isInit()
+    {
+        return this.queueUrl != null;
+    }
 
 }
