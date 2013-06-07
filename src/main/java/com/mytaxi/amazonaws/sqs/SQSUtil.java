@@ -3,7 +3,7 @@ package com.mytaxi.amazonaws.sqs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.amazonaws.services.sqs.AmazonSQSAsync;
+import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.CreateQueueRequest;
 import com.amazonaws.services.sqs.model.DeleteQueueRequest;
 import com.amazonaws.services.sqs.model.GetQueueUrlRequest;
@@ -15,7 +15,9 @@ public final class SQSUtil
     private static final Logger LOG = LoggerFactory.getLogger(SQSUtil.class);
 
 
-    public static String create(final AmazonSQSAsync sqs, final String queueName)
+
+
+    public static String create(final AmazonSQS sqs, final String queueName)
     {
         Preconditions.checkNotNull(sqs);
         Preconditions.checkNotNull(queueName);
@@ -32,7 +34,7 @@ public final class SQSUtil
 
 
 
-    public static void delete(final AmazonSQSAsync sqs, final String queueName)
+    public static void delete(final AmazonSQS sqs, final String queueName)
     {
         Preconditions.checkNotNull(sqs);
         Preconditions.checkNotNull(queueName);
@@ -44,7 +46,7 @@ public final class SQSUtil
 
 
 
-    public static void deleteByUrl(final AmazonSQSAsync sqs, final String queueUrl)
+    public static void deleteByUrl(final AmazonSQS sqs, final String queueUrl)
     {
         Preconditions.checkNotNull(sqs);
         Preconditions.checkNotNull(queueUrl);
@@ -58,7 +60,7 @@ public final class SQSUtil
 
 
 
-    public static String getQueueUrl(final AmazonSQSAsync sqs, final String queueName)
+    public static String getQueueUrl(final AmazonSQS sqs, final String queueName)
     {
         Preconditions.checkNotNull(sqs);
         Preconditions.checkNotNull(queueName);

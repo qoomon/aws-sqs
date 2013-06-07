@@ -1,4 +1,4 @@
-package com.mytaxi.amazonaws.sqs;
+package com.mytaxi.amazonaws.sqs.queue;
 
 import com.amazonaws.services.sqs.model.Message;
 import com.google.common.base.Function;

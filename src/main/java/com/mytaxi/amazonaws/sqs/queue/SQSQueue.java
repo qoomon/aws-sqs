@@ -1,23 +1,19 @@
-package com.mytaxi.amazonaws.sqs;
+package com.mytaxi.amazonaws.sqs.queue;
 
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.amazonaws.services.sqs.AmazonSQSAsync;
+import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.ChangeMessageVisibilityBatchRequest;
 import com.amazonaws.services.sqs.model.ChangeMessageVisibilityBatchRequestEntry;
-import com.amazonaws.services.sqs.model.ChangeMessageVisibilityBatchResult;
 import com.amazonaws.services.sqs.model.ChangeMessageVisibilityRequest;
 import com.amazonaws.services.sqs.model.DeleteMessageBatchRequest;
 import com.amazonaws.services.sqs.model.DeleteMessageBatchRequestEntry;
-import com.amazonaws.services.sqs.model.DeleteMessageBatchResult;
 import com.amazonaws.services.sqs.model.DeleteMessageRequest;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
@@ -33,27 +29,28 @@ import com.google.common.base.Preconditions;
  * @author bengtbrodersen
  *
  */
-public class SQSAsyncQueue<T>
+public class SQSQueue<T>
 {
 
-    static final Logger               LOG                                               = LoggerFactory.getLogger(SQSAsyncQueue.class);
+    static final Logger               LOG                                                      = LoggerFactory.getLogger(SQSQueue.class);
 
     public static final int           RECEIVED_MESSAGE_REQUEST_MAX_NVISIBILITY_TIMEOUT_SECONDS = 1000 * 60 * 60 * 12;
-    public static final int           RECEIVED_MESSAGE_REQUEST_MAX_NUMBER_OF_MESSAGES   = 10;
-    public static final int           RECEIVED_MESSAGE_REQUEST_MAX_WAIT_TIMEOUT_SECONDS = 20;
+    public static final int           RECEIVED_MESSAGE_REQUEST_MAX_NUMBER_OF_MESSAGES          = 10;
+    public static final int           RECEIVED_MESSAGE_REQUEST_MAX_WAIT_TIMEOUT_SECONDS        = 20;
 
-    private final AmazonSQSAsync      sqs;
+    private final AmazonSQS           sqs;
     private final Function<T, String> encoder;
     private final Function<String, T> decoder;
 
     private final String              queueUrl;
-    private int                       waitTimeSeconds                                   = RECEIVED_MESSAGE_REQUEST_MAX_WAIT_TIMEOUT_SECONDS;
-    private int                       visibilityTimeoutSeconds                          = 10;
+    private int                       waitTimeSeconds                                          = RECEIVED_MESSAGE_REQUEST_MAX_WAIT_TIMEOUT_SECONDS;
+    private int                       visibilityTimeoutSeconds                                 = 10;
+
 
 
 
     @Autowired
-    public SQSAsyncQueue(final AmazonSQSAsync sqs, final String queueUrl,
+    public SQSQueue(final AmazonSQS sqs, final String queueUrl,
             final Function<T, String> encoder,
             final Function<String, T> decoder)
     {
@@ -63,7 +60,10 @@ public class SQSAsyncQueue<T>
         this.decoder = Preconditions.checkNotNull(decoder);
     }
 
-    public void sendMessageAsync(final T messageBody, final int delaySeconds)
+
+
+
+    public void sendMessage(final T messageBody, final int delaySeconds)
     {
         Preconditions.checkNotNull(messageBody, "messageBody is null");
 
@@ -71,13 +71,13 @@ public class SQSAsyncQueue<T>
         final SendMessageRequest sendMessageRequest = new SendMessageRequest(this.queueUrl, encodedMessageBody)
                 .withDelaySeconds(delaySeconds);
 
-        this.sqs.sendMessageAsync(sendMessageRequest);
+        this.sqs.sendMessage(sendMessageRequest);
     }
 
 
 
 
-    public void sendMessageBatchAsync(final Collection<T> messageBodys, final int delaySeconds)
+    public void sendMessageBatch(final Collection<T> messageBodys, final int delaySeconds)
     {
         Preconditions.checkNotNull(messageBodys, "messageBodys is null");
 
@@ -96,16 +96,16 @@ public class SQSAsyncQueue<T>
             index++;
         }
         final SendMessageBatchRequest sendMessageBatchRequest = new SendMessageBatchRequest(this.queueUrl, entries);
-        this.sqs.sendMessageBatchAsync(sendMessageBatchRequest);
+        this.sqs.sendMessageBatch(sendMessageBatchRequest);
 
     }
 
 
 
 
-    public ObjectMessage<T> receiveMessageAsync()
+    public ObjectMessage<T> receiveMessage()
     {
-        final List<ObjectMessage<T>> receiveMessages = this.receiveMessageBatchAsync(1);
+        final List<ObjectMessage<T>> receiveMessages = this.receiveMessageBatch(1);
         if (!receiveMessages.isEmpty())
         {
             return receiveMessages.get(0);
@@ -116,7 +116,7 @@ public class SQSAsyncQueue<T>
 
 
 
-    public List<ObjectMessage<T>> receiveMessageBatchAsync(final int maxNumberOfMessages)
+    public List<ObjectMessage<T>> receiveMessageBatch(final int maxNumberOfMessages)
     {
         Preconditions.checkArgument(maxNumberOfMessages > 0, "maxNumberOfMessages <= 0");
 
@@ -126,47 +126,31 @@ public class SQSAsyncQueue<T>
                 .withWaitTimeSeconds(this.waitTimeSeconds)
                 .withVisibilityTimeout(this.visibilityTimeoutSeconds)
                 .withMaxNumberOfMessages(Math.min(maxNumberOfMessages, RECEIVED_MESSAGE_REQUEST_MAX_NUMBER_OF_MESSAGES));
-        try
+        final List<Message> receiveMessages = this.sqs.receiveMessage(receiveMessageRequest).getMessages();
+        final List<ObjectMessage<T>> convertedMessages = new LinkedList<ObjectMessage<T>>();
+        for (final Message receiveMessage : receiveMessages)
         {
-            final List<Message> receiveMessages = this.sqs.receiveMessageAsync(receiveMessageRequest).get().getMessages();
-            final List<ObjectMessage<T>> convertedMessages = new LinkedList<ObjectMessage<T>>();
-            for (final Message receiveMessage : receiveMessages)
-            {
-                convertedMessages.add(new ObjectMessage<T>(receiveMessage, this.decoder));
-            }
-            return convertedMessages;
+            convertedMessages.add(new ObjectMessage<T>(receiveMessage, this.decoder));
         }
-        catch (final InterruptedException e)
-        {
-            throw new RuntimeException(e);
-        }
-        catch (final ExecutionException e)
-        {
-            throw new RuntimeException(e);
-        }
-
-
+        return convertedMessages;
     }
 
 
 
 
-
-
-
-    public Future<Void> deleteMessageAsync(final String receiptHandle)
+    public void deleteMessage(final String receiptHandle)
     {
         Preconditions.checkNotNull(receiptHandle, "receiptHandle is null");
 
         final DeleteMessageRequest deleteMessageRequest =
                 new DeleteMessageRequest(this.queueUrl, receiptHandle);
-        return this.sqs.deleteMessageAsync(deleteMessageRequest);
+        this.sqs.deleteMessage(deleteMessageRequest);
     }
 
 
 
 
-    public Future<DeleteMessageBatchResult> deleteMessageBatchAsync(final Collection<String> receiptHandles)
+    public void deleteMessageBatch(final Collection<String> receiptHandles)
     {
         Preconditions.checkNotNull(receiptHandles, "receiptHandles is null");
         Preconditions.checkArgument(!receiptHandles.isEmpty(), "receiptHandles is empty");
@@ -179,26 +163,25 @@ public class SQSAsyncQueue<T>
             messageIndex++;
         }
         final DeleteMessageBatchRequest deleteMessageBatchRequest = new DeleteMessageBatchRequest(this.queueUrl, entries);
-        return this.sqs.deleteMessageBatchAsync(deleteMessageBatchRequest);
+        this.sqs.deleteMessageBatch(deleteMessageBatchRequest);
     }
 
 
 
 
-
-    public Future<Void> changeMessageVisibilityAsync(final String receiptHandle, final int visibilityTimeoutSeconds)
+    public void changeMessageVisibility(final String receiptHandle, final int visibilityTimeoutSeconds)
     {
         Preconditions.checkNotNull(receiptHandle, "receiptHandle is null");
 
         final ChangeMessageVisibilityRequest changeMessageVisibilityRequest =
                 new ChangeMessageVisibilityRequest(this.queueUrl, receiptHandle, visibilityTimeoutSeconds);
-        return this.sqs.changeMessageVisibilityAsync(changeMessageVisibilityRequest);
+        this.sqs.changeMessageVisibility(changeMessageVisibilityRequest);
     }
 
 
 
 
-    public Future<ChangeMessageVisibilityBatchResult> changeMessageVisibilityBatchAsync(final Collection<String> receiptHandles, final int visibilityTimeoutSeconds)
+    public void changeMessageVisibilityBatch(final Collection<String> receiptHandles, final int visibilityTimeoutSeconds)
     {
         Preconditions.checkNotNull(receiptHandles, "receiptHandles is null");
         Preconditions.checkArgument(!receiptHandles.isEmpty(), "receiptHandles is empty");
@@ -215,7 +198,7 @@ public class SQSAsyncQueue<T>
 
         final ChangeMessageVisibilityBatchRequest changeMessageVisibilityBatchRequest =
                 new ChangeMessageVisibilityBatchRequest(this.queueUrl, entries);
-        return this.sqs.changeMessageVisibilityBatchAsync(changeMessageVisibilityBatchRequest);
+        this.sqs.changeMessageVisibilityBatch(changeMessageVisibilityBatchRequest);
     }
 
 
@@ -232,7 +215,7 @@ public class SQSAsyncQueue<T>
 
 
 
-    public SQSAsyncQueue<T> withVisibilityTimeoutSeconds(final int visibilityTimeoutSeconds)
+    public SQSQueue<T> withVisibilityTimeoutSeconds(final int visibilityTimeoutSeconds)
     {
         this.setVisibilityTimeoutSeconds(visibilityTimeoutSeconds);
         return this;
@@ -252,7 +235,7 @@ public class SQSAsyncQueue<T>
 
 
 
-    public SQSAsyncQueue<T> withWaitTimeSeconds(final int waitTimeSeconds)
+    public SQSQueue<T> withWaitTimeSeconds(final int waitTimeSeconds)
     {
         this.setWaitTimeSeconds(waitTimeSeconds);
         return this;
@@ -260,16 +243,20 @@ public class SQSAsyncQueue<T>
 
 
 
-    public AmazonSQSAsync getSqs()
+
+    public AmazonSQS getSqs()
     {
         return this.sqs;
     }
+
+
 
 
     public String getQueueUrl()
     {
         return this.queueUrl;
     }
+
 
 
 
@@ -285,7 +272,5 @@ public class SQSAsyncQueue<T>
     {
         return this.visibilityTimeoutSeconds;
     }
-
-
 
 }
