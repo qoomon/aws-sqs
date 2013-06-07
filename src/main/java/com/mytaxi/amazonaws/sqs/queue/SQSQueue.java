@@ -6,7 +6,6 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.ChangeMessageVisibilityBatchRequest;
@@ -49,7 +48,6 @@ public class SQSQueue<T>
 
 
 
-    @Autowired
     public SQSQueue(final AmazonSQS sqs, final String queueUrl,
             final Function<T, String> encoder,
             final Function<String, T> decoder)

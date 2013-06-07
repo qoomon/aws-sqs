@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="10 seconds">
+
+
+	<conversionRule conversionWord="relativeX"
+		converterClass="com.mytaxi.logging.RelativeCompositeConverter" />
+
+	<conversionRule conversionWord="highlightX"
+		converterClass="com.mytaxi.logging.HighlightingCompositeConverter" />
+
+	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<charset>UTF-8</charset>
+			<pattern><![CDATA[%date{ISO8601} | %relativeX | %-8thread | %-5level{5} | %-32logger{32} | %-64message | %mdc{NDC}%n%exception{short}]]></pattern>
+		</encoder>
+	</appender>
+
+	<root level="TRACE" additivity="false">
+		<appender-ref ref="CONSOLE" />
+	</root>
+
+
+
+	<!-- EXAMPLES -->
+
+
+	<appender name="FILE"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+
+		<file>logFile.log.txt</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<!-- daily rollover -->
+			<fileNamePattern><![CDATA[logFile.%d{yyyy-MM-dd}.%i.log.txt]]></fileNamePattern>
+			<!-- days' worth of history -->
+			<maxHistory>30</maxHistory>
+			<timeBasedFileNamingAndTriggeringPolicy
+				class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+				max file size
+				<maxFileSize>1000MB</maxFileSize>
+			</timeBasedFileNamingAndTriggeringPolicy>
+		</rollingPolicy>
+
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<charset>UTF-8</charset>
+			<pattern><![CDATA[%highlightX%date{ISO8601} | %relativeX | %-8thread | %-5level{5} | %-32logger | %-64message | %mdc{NDC}%n%exception{short}]]></pattern>
+		</encoder>
+	</appender>
+
+	<logger name="com.mytaxi">
+		<level value="TRACE" />
+	</logger>
+
+</configuration>

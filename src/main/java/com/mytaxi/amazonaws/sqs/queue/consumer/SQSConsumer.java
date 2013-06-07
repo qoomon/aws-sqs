@@ -19,15 +19,19 @@ import com.mytaxi.amazonaws.sqs.queue.SQSQueue;
 public class SQSConsumer<T>
 {
 
-    static final Logger           LOG = LoggerFactory.getLogger(SQSConsumer.class);
+    static final Logger                LOG                          = LoggerFactory.getLogger(SQSConsumer.class);
 
-    private final SQSQueue<T>     queue;
-    private final ExecutorService executorService;
-    private int                   minWorkerCount = 1;
-    private int                   maxWorkerCount = 1;
+    protected static final int         MAX_MESSAGE_RECEIVE_COUNT    = 5;
+    protected static final int         MESSAGE_HANDLE_RETRY_SECONDS = 5;
+
+    private final SQSQueue<T>          queue;
+    private final ExecutorService      executorService;
+    private int                        minWorkerCount               = 1;
+    private int                        maxWorkerCount               = 1;
     private final SQSMessageHandler<T> handler;
 
-    private final Runnable         worker;
+    private final Runnable             worker;
+    private int                        workerCount;
 
 
 
@@ -45,6 +49,7 @@ public class SQSConsumer<T>
             @Override
             public void run()
             {
+                LOG.debug("worker run");
                 while (!SQSConsumer.this.executorService.isShutdown())
                 {
                     try
@@ -52,12 +57,32 @@ public class SQSConsumer<T>
                         final ObjectMessage<T> receiveMessage = SQSConsumer.this.queue.receiveMessage();
                         if (receiveMessage != null)
                         {
-                            SQSConsumer.this.handler.receivedMessage(queue, receiveMessage);
-                            // TODO increase worker
+                            SQSConsumer.this.increaseWorkerCount();
+                            try
+                            {
+                                SQSConsumer.this.handler.receivedMessage(queue, receiveMessage);
+                            }
+                            catch (final Throwable e)
+                            {
+                                final int approximateReceiveCount = receiveMessage.getApproximateReceiveCount();
+                                LOG.error("uncought exception while message handling. approximate receive count: " + approximateReceiveCount, e);
+                                if (approximateReceiveCount < MAX_MESSAGE_RECEIVE_COUNT)
+                                {
+                                    queue.changeMessageVisibility(receiveMessage.getReceiptHandle(), MESSAGE_HANDLE_RETRY_SECONDS);
+                                }
+                                else
+                                {
+                                    LOG.warn("remove message after " + MESSAGE_HANDLE_RETRY_SECONDS + " tries", e);
+                                    queue.deleteMessage(receiveMessage.getReceiptHandle());
+                                }
+                            }
                         }
                         else
                         {
-                            // TODO decrease worker
+                            if (SQSConsumer.this.decreaseWorkerCount())
+                            {
+                                break;
+                            }
                         }
                     }
                     catch (final Throwable e)
@@ -65,10 +90,10 @@ public class SQSConsumer<T>
                         LOG.error("uncought exception", e);
                     }
                 }
+                LOG.debug("worker died");
             }
         };
     }
-
 
 
 
@@ -78,9 +103,45 @@ public class SQSConsumer<T>
         // initialize workers
         for (int i = 0; i < this.minWorkerCount; i++)
         {
-            this.executorService.submit(this.worker);
+            this.increaseWorkerCount();
+
         }
     }
+
+
+
+
+    private synchronized boolean increaseWorkerCount()
+    {
+        if (this.workerCount < this.maxWorkerCount)
+        {
+            this.executorService.submit(this.worker);
+            this.workerCount++;
+            LOG.debug("increase worker count. actual worker count: " + this.workerCount);
+            return true;
+        }
+
+        return false;
+    }
+
+
+
+
+    private synchronized boolean decreaseWorkerCount()
+    {
+        if (this.workerCount > this.minWorkerCount)
+        {
+            this.workerCount++;
+            LOG.debug("decrease worker count. actual worker count: " + this.workerCount);
+            return true;
+        }
+
+        return false;
+    }
+
+
+
+
 
 
 
@@ -128,6 +189,5 @@ public class SQSConsumer<T>
         this.setMinWorkerCount(minWorkerCount);
         return this;
     }
-
 
 }
