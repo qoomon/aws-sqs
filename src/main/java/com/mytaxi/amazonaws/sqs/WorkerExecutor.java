@@ -1,7 +1,6 @@
 package com.mytaxi.amazonaws.sqs;
 
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -22,14 +21,6 @@ public class WorkerExecutor
     private final Runnable        worker;
     private final int             workerCount;
     private final Handler         handler;
-
-
-
-
-    public WorkerExecutor(final int workerCount, final Handler handler)
-    {
-        this(Executors.newFixedThreadPool(workerCount), workerCount, handler);
-    }
 
 
 

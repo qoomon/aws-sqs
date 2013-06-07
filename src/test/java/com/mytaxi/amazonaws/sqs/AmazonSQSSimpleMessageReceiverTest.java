@@ -4,6 +4,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
@@ -13,6 +14,7 @@ import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.amazonaws.services.sqs.AmazonSQSAsyncClient;
 import com.amazonaws.services.sqs.buffered.AmazonSQSBufferedAsyncClient;
 import com.google.common.base.Stopwatch;
+import com.mytaxi.amazonaws.sqs.WorkerExecutor.Handler;
 
 public class AmazonSQSSimpleMessageReceiverTest
 {
@@ -39,32 +41,43 @@ public class AmazonSQSSimpleMessageReceiverTest
             }
         };
         final AmazonSQSAsync sqsAsync = new AmazonSQSAsyncClient(awsCredentials);
-        // Create the buffered client
         final AmazonSQSAsync sqs = new AmazonSQSBufferedAsyncClient(sqsAsync);
 
         final String queueName = "Test-" + UUID.randomUUID();
-        final AmazonSQSQueue amazonSQSQueue = new AmazonSQSQueue(sqs, queueName, 20, 5);
-        amazonSQSQueue.create();
+        final String queueUrl = SQSUtil.create(sqs, queueName);
+        final SQSAsyncQueue<String> sqsQueue = new DefaultSQSAsyncQueue(sqs, queueUrl)
+                .withVisibilityTimeoutSeconds(10)
+                .withWaitTimeSeconds(5);
+
         final int messagesToSend = 100;
-        this.fillQueueWithTestData(amazonSQSQueue, messagesToSend);
+        this.fillQueueWithTestData(sqsQueue, messagesToSend);
 
         final CountDownLatch countDownLatch = new CountDownLatch(messagesToSend);
-        final MessageHandler messageHandler = new MessageHandler()
+
+        final WorkerExecutor workerExecutor = new WorkerExecutor(Executors.newCachedThreadPool(), 32, new Handler()
         {
 
             @Override
-            public void receivedMessage(final MessageTask messageTask)
+            public void run()
             {
-                countDownLatch.countDown();
-                System.out.println("countDownLatch: " + countDownLatch.getCount());
-                messageTask.delete();
+                final ObjectMessage<String> message = sqsQueue.receiveMessageAsync();
+                if (message != null)
+                {
+                    final String body = message.getBody();
+                    countDownLatch.countDown();
+                    System.out.println("message received: " + body + " - countDownLatch: " + countDownLatch.getCount());
+                    sqsQueue.deleteMessageAsync(message.getReceiptHandle());
+                }
+                else
+                {
+                    System.out.println("no message received");
+                }
+
             }
-        };
-        final AmazonSQSSimpleMessageReceiver amazonSQSSimpleMessageReceiver =
-                new AmazonSQSSimpleMessageReceiver(amazonSQSQueue, messageHandler, 32);
+        });
 
         // WHEN
-        amazonSQSSimpleMessageReceiver.start();
+        workerExecutor.start();
         final Stopwatch stopwatch = new Stopwatch().start();
 
         // THEN
@@ -72,21 +85,23 @@ public class AmazonSQSSimpleMessageReceiverTest
         countDownLatch.await(maxRuntime, TimeUnit.MILLISECONDS);
         final long runtime = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
         System.out.println("runtime: " + runtime + " waiting for shutdown");
-        amazonSQSSimpleMessageReceiver.shutdown();
-        amazonSQSQueue.delete();
+        workerExecutor.releaseExternalResources();
+        SQSUtil.deleteByUrl(sqs, queueUrl);
         assertTrue("runtime warning:  " + runtime, runtime < maxRuntime);
 
     }
 
 
-    private void fillQueueWithTestData(final AmazonSQSQueue amazonSqs, final int messagesToSend)
+
+
+    private void fillQueueWithTestData(final SQSAsyncQueue<String> sqsQueue, final int messagesToSend)
     {
         System.out.println("start sending messages...");
         int messageCount = 0;
         while (messageCount < messagesToSend)
         {
             messageCount++;
-            amazonSqs.sendMessage("messageCount: " + messageCount + " - " + System.currentTimeMillis(), 0);
+            sqsQueue.sendMessageAsync("messageCount: " + messageCount + " - " + System.currentTimeMillis(), 0);
             System.out.println("send: messageID: " + messageCount);
         }
         System.out.println("all messages send!");
