@@ -54,8 +54,8 @@ public class AmazonSQSSimpleMessageReceiverTest
         final String queueName = "Test-" + UUID.randomUUID();
         final String queueUrl = SQSUtil.create(sqs, queueName);
         final SQSQueue<String> sqsQueue = new SQSDefaultQueue(sqs, queueUrl)
-                .withVisibilityTimeoutSeconds(10)
-                .withWaitTimeSeconds(5);
+                .withVisibilityTimeoutSeconds(5)
+                .withWaitTimeSeconds(1);
 
         final int messagesToSend = 100;
         this.fillQueueWithTestData(sqs, queueUrl, messagesToSend);
@@ -89,6 +89,7 @@ public class AmazonSQSSimpleMessageReceiverTest
         countDownLatch.await(maxRuntime, TimeUnit.MILLISECONDS);
         final long runtime = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
         System.out.println("runtime: " + runtime + " waiting for shutdown");
+        sqsConsumer.stop();
         sqsConsumer.releaseExternalResources();
         SQSUtil.deleteByUrl(sqs, queueUrl);
         assertTrue("runtime warning:  " + runtime, runtime < maxRuntime);

@@ -33,6 +33,8 @@ public class SQSConsumer<T>
     private final Runnable             worker;
     private int                        workerCount;
 
+    private boolean                    running                      = false;
+
 
 
 
@@ -49,8 +51,9 @@ public class SQSConsumer<T>
             @Override
             public void run()
             {
+                boolean loop = true;
                 LOG.debug("worker run");
-                while (!SQSConsumer.this.executorService.isShutdown())
+                while (SQSConsumer.this.running && loop)
                 {
                     try
                     {
@@ -79,10 +82,7 @@ public class SQSConsumer<T>
                         }
                         else
                         {
-                            if (SQSConsumer.this.decreaseWorkerCount())
-                            {
-                                break;
-                            }
+                            loop = !SQSConsumer.this.decreaseWorkerCount();
                         }
                     }
                     catch (final Throwable e)
@@ -100,11 +100,9 @@ public class SQSConsumer<T>
 
     public void start()
     {
-        // initialize workers
-        for (int i = 0; i < this.minWorkerCount; i++)
+        this.running = true;
+        while (this.increaseWorkerCount())
         {
-            this.increaseWorkerCount();
-
         }
     }
 
@@ -131,7 +129,7 @@ public class SQSConsumer<T>
     {
         if (this.workerCount > this.minWorkerCount)
         {
-            this.workerCount++;
+            this.workerCount--;
             LOG.debug("decrease worker count. actual worker count: " + this.workerCount);
             return true;
         }
@@ -142,6 +140,10 @@ public class SQSConsumer<T>
 
 
 
+    public void stop() throws InterruptedException
+    {
+        this.running = false;
+    }
 
 
 
