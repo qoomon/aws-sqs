@@ -1,6 +1,6 @@
 analyseLocally=false
 eclipse.preferences.version=1
-extraProperties=sonar.jdbc.password\=sonar\r\nsonar.host.url\=http\://localhost\:9000\r\nsonar.jdbc.username\=sonar\r\nsonar.jdbc.url\=jdbc\:postgresql\://localhost/sonar\r\nsonar.login\=admin\r\nsonar.jdbc.driver\=org.postgresql.Driver\r\nsonar.password\=myt\!sonar1
+extraProperties=sonar.host.url\=http\://localhost\:9000\r\nsonar.jdbc.password\=sonar\r\nsonar.jdbc.username\=sonar\r\nsonar.jdbc.url\=jdbc\:postgresql\://localhost/sonar\r\nsonar.login\=admin\r\nsonar.jdbc.driver\=org.postgresql.Driver\r\nsonar.password\=myt\!sonar1
 projectKey=com.mytaxi\:amazonsqs
 serverUrl=http\://localhost\:9000
 version=2
