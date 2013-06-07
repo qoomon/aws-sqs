@@ -1,9 +1,8 @@
 package com.mytaxi.amazonaws.sqs.converter;
 
-import com.google.common.base.Function;
 
 
-public class SQSDefaultDecoder implements Function<String, String>
+public class SQSDefaultDecoder implements Decoder<String>
 {
     @Override
     public String apply(final String input)
