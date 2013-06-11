@@ -33,7 +33,7 @@ public class SQSQueue<T>
 
     static final Logger               LOG                                                      = LoggerFactory.getLogger(SQSQueue.class);
 
-    public static final int           RECEIVED_MESSAGE_REQUEST_MAX_NVISIBILITY_TIMEOUT_SECONDS = 1000 * 60 * 60 * 12;
+    public static final int           RECEIVED_MESSAGE_REQUEST_MAX_INVISIBILITY_TIMEOUT_SECONDS = 1000 * 60 * 60 * 12;
     public static final int           RECEIVED_MESSAGE_REQUEST_MAX_NUMBER_OF_MESSAGES          = 10;
     public static final int           RECEIVED_MESSAGE_REQUEST_MAX_WAIT_TIMEOUT_SECONDS        = 20;
 
@@ -57,8 +57,6 @@ public class SQSQueue<T>
         this.encoder = Preconditions.checkNotNull(encoder);
         this.decoder = Preconditions.checkNotNull(decoder);
     }
-
-
 
 
     public void sendMessage(final T messageBody, final int delaySeconds)
@@ -205,7 +203,7 @@ public class SQSQueue<T>
     public void setVisibilityTimeoutSeconds(final int visibilityTimeoutSeconds)
     {
         Preconditions.checkArgument(visibilityTimeoutSeconds > 0);
-        Preconditions.checkArgument(visibilityTimeoutSeconds <= RECEIVED_MESSAGE_REQUEST_MAX_NVISIBILITY_TIMEOUT_SECONDS);
+        Preconditions.checkArgument(visibilityTimeoutSeconds <= RECEIVED_MESSAGE_REQUEST_MAX_INVISIBILITY_TIMEOUT_SECONDS);
 
         this.visibilityTimeoutSeconds = visibilityTimeoutSeconds;
     }

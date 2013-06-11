@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Preconditions;
 import com.mytaxi.amazonaws.sqs.queue.ObjectMessage;
 import com.mytaxi.amazonaws.sqs.queue.SQSQueue;
+import com.mytaxi.logging.NDC;
 
 /**
  * UtilClass to continuously poll from amazon message queue
@@ -21,8 +22,7 @@ public class SQSConsumer<T>
 
     static final Logger                LOG                          = LoggerFactory.getLogger(SQSConsumer.class);
 
-    protected static final int         MAX_MESSAGE_RECEIVE_COUNT    = 5;
-    protected static final int         MESSAGE_HANDLE_RETRY_SECONDS = 5;
+    protected static final int         MESSAGE_HANDLE_RETRY_SECONDS = 20;
 
     private final SQSQueue<T>          queue;
     private final ExecutorService      executorService;
@@ -61,6 +61,7 @@ public class SQSConsumer<T>
                         if (receiveMessage != null)
                         {
                             SQSConsumer.this.increaseWorkerCount();
+                            NDC.push("message[ " + receiveMessage.getId() + " ]");
                             try
                             {
                                 SQSConsumer.this.handler.receivedMessage(queue, receiveMessage);
@@ -69,16 +70,13 @@ public class SQSConsumer<T>
                             {
                                 final int approximateReceiveCount = receiveMessage.getApproximateReceiveCount();
                                 LOG.error("uncought exception while message handling. approximate receive count: " + approximateReceiveCount, e);
-                                if (approximateReceiveCount < MAX_MESSAGE_RECEIVE_COUNT)
-                                {
-                                    queue.changeMessageVisibility(receiveMessage.getReceiptHandle(), MESSAGE_HANDLE_RETRY_SECONDS);
-                                }
-                                else
-                                {
-                                    LOG.warn("remove message after " + MESSAGE_HANDLE_RETRY_SECONDS + " tries", e);
-                                    queue.deleteMessage(receiveMessage.getReceiptHandle());
-                                }
+                                queue.changeMessageVisibility(receiveMessage.getReceiptHandle(), MESSAGE_HANDLE_RETRY_SECONDS);
                             }
+                            finally
+                            {
+                                NDC.pop();
+                            }
+
                         }
                         else
                         {

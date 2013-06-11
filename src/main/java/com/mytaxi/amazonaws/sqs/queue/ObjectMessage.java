@@ -1,5 +1,7 @@
 package com.mytaxi.amazonaws.sqs.queue;
 
+import java.util.Map;
+
 import com.amazonaws.services.sqs.model.Message;
 import com.google.common.base.Function;
 
@@ -24,9 +26,41 @@ public class ObjectMessage<T>
 
 
 
+    public Message getMessage()
+    {
+        return this.message;
+    }
+
+
+
+
+    public String getId()
+    {
+        return this.getMessage().getMessageId();
+    }
+
+
+
+
+    public String getMD5OfBody()
+    {
+        return this.getMessage().getMD5OfBody();
+    }
+
+
+
+
     public String getReceiptHandle()
     {
-        return this.message.getReceiptHandle();
+        return this.getMessage().getReceiptHandle();
+    }
+
+
+
+
+    public Map<String, String> getAttributes()
+    {
+        return this.getMessage().getAttributes();
     }
 
 
@@ -37,7 +71,7 @@ public class ObjectMessage<T>
 
         if (this.body == null)
         {
-            this.body = this.decoder.apply(this.message.getBody());
+            this.body = this.decoder.apply(this.getMessage().getBody());
         }
 
         return this.body;
@@ -50,7 +84,7 @@ public class ObjectMessage<T>
     {
         if (this.approximateReceiveCount < 0)
         {
-            final String approximateReceiveCountString = this.message.getAttributes().get("ApproximateReceiveCount");
+            final String approximateReceiveCountString = this.getAttributes().get("ApproximateReceiveCount");
             if (approximateReceiveCountString != null)
             {
                 this.approximateReceiveCount = Integer.parseInt(approximateReceiveCountString);
@@ -67,9 +101,5 @@ public class ObjectMessage<T>
 
 
 
-    public Message getMessage()
-    {
-        return this.message;
-    }
 
 }
