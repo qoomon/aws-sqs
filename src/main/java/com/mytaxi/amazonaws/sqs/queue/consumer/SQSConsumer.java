@@ -2,6 +2,7 @@ package com.mytaxi.amazonaws.sqs.queue.consumer;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +33,7 @@ public class SQSConsumer<T>
 
     private final Runnable             worker;
     private int                        workerCount;
+    private final AtomicInteger              waitingWorkerCount           = new AtomicInteger(0);
 
     private boolean                    running                      = false;
 
@@ -57,10 +59,16 @@ public class SQSConsumer<T>
                 {
                     try
                     {
+                        SQSConsumer.this.waitingWorkerCount.incrementAndGet();
                         final ObjectMessage<T> receiveMessage = SQSConsumer.this.queue.receiveMessage();
+                        SQSConsumer.this.waitingWorkerCount.decrementAndGet();
                         if (receiveMessage != null)
                         {
-                            SQSConsumer.this.increaseWorkerCount();
+                            if (SQSConsumer.this.waitingWorkerCount.get() == 0)
+                            {
+                                SQSConsumer.this.increaseWorkerCount();
+                            }
+
                             NDC.push("message[ " + receiveMessage.getId() + " ]");
                             try
                             {
