@@ -6,11 +6,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import com.google.common.base.Preconditions;
 import com.mytaxi.amazonaws.sqs.queue.ObjectMessage;
 import com.mytaxi.amazonaws.sqs.queue.SQSQueue;
-import com.mytaxi.logging.NDC;
 
 /**
  * UtilClass to continuously poll from amazon message queue
@@ -22,6 +22,7 @@ public class SQSConsumer<T>
 {
 
     static final Logger                LOG                          = LoggerFactory.getLogger(SQSConsumer.class);
+    static final String                SQS_MESSAGE_MDC_KEY          = "SQSMessage";
 
     protected static final int         MESSAGE_HANDLE_RETRY_SECONDS = 20;
 
@@ -69,7 +70,7 @@ public class SQSConsumer<T>
                                 SQSConsumer.this.increaseWorkerCount();
                             }
 
-                            NDC.push("message[ " + receiveMessage.getId() + " ]");
+                            MDC.put(SQS_MESSAGE_MDC_KEY, receiveMessage.getId());
                             try
                             {
                                 SQSConsumer.this.handler.receivedMessage(queue, receiveMessage);
@@ -82,7 +83,7 @@ public class SQSConsumer<T>
                             }
                             finally
                             {
-                                NDC.pop();
+                                MDC.remove(SQS_MESSAGE_MDC_KEY);
                             }
 
                         }
