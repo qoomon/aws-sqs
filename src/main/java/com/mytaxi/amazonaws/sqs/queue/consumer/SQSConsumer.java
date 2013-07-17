@@ -156,7 +156,7 @@ public class SQSConsumer<T>
                         MDC.put(SQS_MESSAGE_MDC_KEY, receiveMessage.getId());
                         try
                         {
-                            LOG.debug("change message visibility to " + SQSConsumer.this.longRunningChangeVisibilitySeconds + " seconds.");
+                            LOG.error("change message visibility to " + SQSConsumer.this.longRunningChangeVisibilitySeconds + " seconds.");
                             queue.changeMessageVisibility(receiveMessage.getReceiptHandle(), SQSConsumer.this.longRunningChangeVisibilitySeconds);
                         }
                         finally
