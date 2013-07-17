@@ -78,7 +78,7 @@ public class AmazonSQSSimpleMessageReceiverTest
 
         final SQSConsumer<String> sqsConsumer = new SQSDefaultConsumer(sqsQueue, Executors.newCachedThreadPool(), messageHandler)
                 .withMaxWorkerCount(32)
-                .withMinWorkerCount(1);
+                .withMinWorkerCount(32);
 
         // WHEN
         sqsConsumer.start();

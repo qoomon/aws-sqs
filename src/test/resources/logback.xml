@@ -11,7 +11,7 @@
 	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
 		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
 			<charset>UTF-8</charset>
-			<pattern><![CDATA[%date{ISO8601} | %relativeX | %-8thread | %-5level{5} | %-32logger{32} | %-64message | %mdc{NDC}%n%exception{short}]]></pattern>
+			<pattern><![CDATA[%date{ISO8601} | %relativeX | %-8thread | %-5level{5} | %-32logger{32} | %-64message | %mdc%n%exception{short}]]></pattern>
 		</encoder>
 	</appender>
 	
