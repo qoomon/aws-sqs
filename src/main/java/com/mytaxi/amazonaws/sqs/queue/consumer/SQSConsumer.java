@@ -95,6 +95,8 @@ public class SQSConsumer<T>
                         SQSConsumer.this.waitingWorkerCount.decrementAndGet();
                         if (receiveMessage != null)
                         {
+                            LOG.trace("receive message[" + receiveMessage.getId() + "]");
+
                             if (SQSConsumer.this.waitingWorkerCount.get() == 0)
                             {
                                 SQSConsumer.this.increaseWorkerCount();
@@ -103,7 +105,6 @@ public class SQSConsumer<T>
                             MDC.put(SQS_MESSAGE_MDC_KEY, receiveMessage.getId());
                             try
                             {
-                                LOG.trace("receive message");
                                 final Runnable visibilityChangeTask = this.newVisibilityChangeTask(queue, receiveMessage);
 
                                 // start watcher for set new visibility timeout
@@ -131,6 +132,7 @@ public class SQSConsumer<T>
                         }
                         else
                         {
+                            LOG.trace("no message received");
                             loop = !SQSConsumer.this.decreaseWorkerCount();
                         }
                     }
