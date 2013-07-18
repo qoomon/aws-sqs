@@ -85,7 +85,7 @@ public class SQSConsumer<T>
             public void run()
             {
                 boolean loop = true;
-                LOG.debug("worker run");
+                LOG.debug("worker start. actual worker count: " + SQSConsumer.this.workerCount);
                 while (SQSConsumer.this.running && loop)
                 {
                     try
