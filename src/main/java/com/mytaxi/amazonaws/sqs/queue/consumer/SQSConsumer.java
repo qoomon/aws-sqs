@@ -141,7 +141,7 @@ public class SQSConsumer<T>
                         LOG.error("uncought exception", e);
                     }
                 }
-                LOG.debug("worker died");
+                LOG.debug("worker died. actual worker count: " + SQSConsumer.this.workerCount);
             }
 
 
