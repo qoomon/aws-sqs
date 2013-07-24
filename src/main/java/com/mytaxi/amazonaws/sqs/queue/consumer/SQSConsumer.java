@@ -148,16 +148,19 @@ public class SQSConsumer<T>
 
             private Runnable newVisibilityChangeTask(final SQSQueue<T> queue, final ObjectMessage<T> receiveMessage)
             {
+                final String threadName = Thread.currentThread().getName();
+
                 return new Runnable()
                 {
 
                     @Override
                     public void run()
                     {
+
                         MDC.put(SQS_MESSAGE_MDC_KEY, receiveMessage.getId());
                         try
                         {
-                            LOG.error("change message visibility to " + SQSConsumer.this.longRunningChangeVisibilitySeconds + " seconds.");
+                            LOG.error("change message visibility to " + SQSConsumer.this.longRunningChangeVisibilitySeconds + " seconds. thread=" + threadName);
                             queue.changeMessageVisibility(receiveMessage.getReceiptHandle(), SQSConsumer.this.longRunningChangeVisibilitySeconds);
                         }
                         finally
