@@ -101,7 +101,6 @@ public class SQSConsumer<T>
                             {
                                 SQSConsumer.this.increaseWorkerCount();
                             }
-
                             MDC.put(SQS_MESSAGE_MDC_KEY, receiveMessage.getId());
                             try
                             {
@@ -208,7 +207,8 @@ public class SQSConsumer<T>
 
     private synchronized boolean decreaseWorkerCount()
     {
-        if (this.workerCount > this.minWorkerCount)
+        if (this.workerCount > this.minWorkerCount
+                && this.waitingWorkerCount.get() > 0)
         {
             this.workerCount--;
             LOG.debug("decrease worker count. actual worker count: " + this.workerCount);
