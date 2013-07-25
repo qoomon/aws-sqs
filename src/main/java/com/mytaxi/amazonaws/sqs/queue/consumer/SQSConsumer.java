@@ -101,21 +101,19 @@ public class SQSConsumer<T>
                             {
                                 SQSConsumer.this.increaseWorkerCount();
                             }
+
+                            final Runnable visibilityChangeTask = this.newVisibilityChangeTask(queue, receiveMessage);
+
+                            // start watcher for set new visibility timeout
+                            final int delaySeconds = queue.getVisibilityTimeoutSeconds() - SQSConsumer.this.longRunningChangeVisibilityOffsetSeconds;
+                            final int periodSeconds = SQSConsumer.this.longRunningChangeVisibilitySeconds - SQSConsumer.this.longRunningChangeVisibilityOffsetSeconds;
+                            final ScheduledFuture<?> futureTask = SQSConsumer.this.scheduledExecutorService.scheduleAtFixedRate(visibilityChangeTask,
+                                    delaySeconds, periodSeconds, TimeUnit.SECONDS);
+
                             MDC.put(SQS_MESSAGE_MDC_KEY, receiveMessage.getId());
                             try
                             {
-                                final Runnable visibilityChangeTask = this.newVisibilityChangeTask(queue, receiveMessage);
-
-                                // start watcher for set new visibility timeout
-                                final int delaySeconds = queue.getVisibilityTimeoutSeconds() - SQSConsumer.this.longRunningChangeVisibilityOffsetSeconds;
-                                final int periodSeconds = SQSConsumer.this.longRunningChangeVisibilitySeconds - SQSConsumer.this.longRunningChangeVisibilityOffsetSeconds;
-                                final ScheduledFuture<?> futureTask = SQSConsumer.this.scheduledExecutorService.scheduleAtFixedRate(visibilityChangeTask,
-                                        delaySeconds, periodSeconds, TimeUnit.SECONDS);
-
                                 SQSConsumer.this.handler.receivedMessage(queue, receiveMessage);
-
-                                // stop watcher for set new visibility timeout
-                                futureTask.cancel(true);
                             }
                             catch (final Throwable e)
                             {
@@ -125,6 +123,8 @@ public class SQSConsumer<T>
                             }
                             finally
                             {
+                                // stop watcher for set new visibility timeout
+                                futureTask.cancel(true);
                                 MDC.remove(SQS_MESSAGE_MDC_KEY);
                             }
 
