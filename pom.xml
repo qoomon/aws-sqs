@@ -7,13 +7,13 @@
   <properties>
 		<maven.javadoc.skip>true</maven.javadoc.skip>
 		<maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
-		<scm.url>scm:git:ssh://git@lab.mytaxi.com/mytaxi/amazonsqs.git</scm.url>
+		<scm.url>scm:git:https://qoomon@bitbucket.org/qoomon/aws-sqs.git</scm.url>
 		<jdk.version>1.6</jdk.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
 		<sonar.login>admin</sonar.login>
-		<sonar.password>myt!sonar1</sonar.password>
+		<sonar.password></sonar.password>
 		<sonar.jdbc.url>jdbc:postgresql://localhost/sonar</sonar.jdbc.url>
 		<sonar.jdbc.driver>org.postgresql.Driver</sonar.jdbc.driver>
 		<sonar.jdbc.username>sonar</sonar.jdbc.username>
@@ -26,7 +26,7 @@
 	<repositories>
 		<repository>
 			<id>mytaxi</id>
-			<url>http://macmini.mytaxi.net:8020/archiva/repository/internal/</url>
+			<url>http://archiva.qoomon.com/archiva/repository/internal/</url>
 		</repository>
 	</repositories>
 
@@ -39,14 +39,17 @@
 			<version>1.4.3</version>
 		</dependency>
 		
-		<!-- MYTAXI -->
-
 
 		<!-- LOGGING -->
 		<dependency>
-			<groupId>com.mytaxi</groupId>
-			<artifactId>logging</artifactId>
-			<version>1.1.2</version>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.7.6</version>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.0.13</version>
 		</dependency>
 
 
@@ -89,9 +92,9 @@
 
 	<distributionManagement>
 		<repository>
-			<id>mytaxi.archiva.internal</id>
+			<id>qoomon.archiva.internal</id>
 			<name>Internal Release Repository</name>
-			<url>dav:http://macmini.mytaxi.net:8020/archiva/repository/internal/</url>
+			<url>dav:http://qoomon.com/archiva/repository/internal/</url>
 		</repository>
 	</distributionManagement>
 

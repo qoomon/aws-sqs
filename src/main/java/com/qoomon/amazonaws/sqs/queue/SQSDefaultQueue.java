@@ -1,8 +1,8 @@
-package com.mytaxi.amazonaws.sqs.queue;
+package com.qoomon.amazonaws.sqs.queue;
 
 import com.amazonaws.services.sqs.AmazonSQSAsync;
-import com.mytaxi.amazonaws.sqs.converter.SQSDefaultDecoder;
-import com.mytaxi.amazonaws.sqs.converter.SQSDefaultEncoder;
+import com.qoomon.amazonaws.sqs.converter.SQSDefaultDecoder;
+import com.qoomon.amazonaws.sqs.converter.SQSDefaultEncoder;
 
 
 /**

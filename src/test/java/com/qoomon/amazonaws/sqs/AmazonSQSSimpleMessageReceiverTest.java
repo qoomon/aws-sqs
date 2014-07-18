@@ -1,4 +1,4 @@
-package com.mytaxi.amazonaws.sqs;
+package com.qoomon.amazonaws.sqs;
 
 import static org.junit.Assert.assertTrue;
 
@@ -15,13 +15,14 @@ import com.amazonaws.services.sqs.AmazonSQSAsyncClient;
 import com.amazonaws.services.sqs.buffered.AmazonSQSBufferedAsyncClient;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.google.common.base.Stopwatch;
-import com.mytaxi.amazonaws.sqs.queue.ObjectMessage;
-import com.mytaxi.amazonaws.sqs.queue.SQSDefaultQueue;
-import com.mytaxi.amazonaws.sqs.queue.SQSQueue;
-import com.mytaxi.amazonaws.sqs.queue.consumer.SQSConsumer;
-import com.mytaxi.amazonaws.sqs.queue.consumer.SQSDefaultConsumer;
-import com.mytaxi.amazonaws.sqs.queue.consumer.SQSDefaultMessageHandler;
-import com.mytaxi.amazonaws.sqs.queue.consumer.SQSMessageHandler;
+import com.qoomon.amazonaws.sqs.SQSUtil;
+import com.qoomon.amazonaws.sqs.queue.ObjectMessage;
+import com.qoomon.amazonaws.sqs.queue.SQSDefaultQueue;
+import com.qoomon.amazonaws.sqs.queue.SQSQueue;
+import com.qoomon.amazonaws.sqs.queue.consumer.SQSConsumer;
+import com.qoomon.amazonaws.sqs.queue.consumer.SQSDefaultConsumer;
+import com.qoomon.amazonaws.sqs.queue.consumer.SQSDefaultMessageHandler;
+import com.qoomon.amazonaws.sqs.queue.consumer.SQSMessageHandler;
 
 public class AmazonSQSSimpleMessageReceiverTest
 {

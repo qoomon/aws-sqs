@@ -1,4 +1,4 @@
-package com.mytaxi.amazonaws.sqs.queue;
+package com.qoomon.amazonaws.sqs.queue;
 
 import java.util.Map;
 

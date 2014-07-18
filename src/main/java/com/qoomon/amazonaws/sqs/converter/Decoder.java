@@ -1,4 +1,4 @@
-package com.mytaxi.amazonaws.sqs.converter;
+package com.qoomon.amazonaws.sqs.converter;
 
 import com.google.common.base.Function;
 

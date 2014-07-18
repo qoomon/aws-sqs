@@ -1,4 +1,4 @@
-package com.mytaxi.amazonaws.sqs;
+package com.qoomon.amazonaws.sqs;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

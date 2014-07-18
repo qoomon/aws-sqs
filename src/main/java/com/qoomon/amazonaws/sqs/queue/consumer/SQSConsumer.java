@@ -1,4 +1,4 @@
-package com.mytaxi.amazonaws.sqs.queue.consumer;
+package com.qoomon.amazonaws.sqs.queue.consumer;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -12,8 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import com.google.common.base.Preconditions;
-import com.mytaxi.amazonaws.sqs.queue.ObjectMessage;
-import com.mytaxi.amazonaws.sqs.queue.SQSQueue;
+import com.qoomon.amazonaws.sqs.queue.ObjectMessage;
+import com.qoomon.amazonaws.sqs.queue.SQSQueue;
 
 /**
  * UtilClass to continuously poll from amazon message queue

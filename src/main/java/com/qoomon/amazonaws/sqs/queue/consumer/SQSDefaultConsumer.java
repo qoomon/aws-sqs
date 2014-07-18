@@ -1,8 +1,8 @@
-package com.mytaxi.amazonaws.sqs.queue.consumer;
+package com.qoomon.amazonaws.sqs.queue.consumer;
 
 import java.util.concurrent.ExecutorService;
 
-import com.mytaxi.amazonaws.sqs.queue.SQSQueue;
+import com.qoomon.amazonaws.sqs.queue.SQSQueue;
 
 /**
  * UtilClass to continuously poll from amazon message queue
