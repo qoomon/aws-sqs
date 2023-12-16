@@ -22,15 +22,6 @@
 
 	</properties>
 
-
-	<repositories>
-		<repository>
-			<id>mytaxi</id>
-			<url>http://archiva.qoomon.com/archiva/repository/internal/</url>
-		</repository>
-	</repositories>
-
-
 	<dependencies>
 
 		<dependency>
